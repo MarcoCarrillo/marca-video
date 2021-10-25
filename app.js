@@ -26,3 +26,34 @@ app.get('/', (req, res) => {
     res.render('index')
 });
 
+app.post('/upload-video', upload.single('ssvideo'), (req, res) => {
+    if(isMainThread){
+
+        let thread = new Worker('./threads/worker.js', { 
+            workerData: {
+                file: req.file.path,
+                filename: req.file.filename
+            } 
+        });
+
+        thread.on('message', data => {
+            res.download(data.file, req.file.filename);
+        });
+
+        thread.on('error', err => {
+            console.log('Error en el thread', err);
+        });
+
+        thread.on('exit', code =>{
+            if(code != 0){
+                console.log(`El hilo se detuvo con el codigo de salida ${code}`);
+            }
+        });
+    }
+
+});
+
+const PORT = 3000;
+app.listen(PORT, () => {
+    console.log(`El server se inicio en el puerto ${PORT}`);
+});
